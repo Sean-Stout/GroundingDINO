@@ -45,9 +45,6 @@ version = "0.1.0"
 package_name = "groundingdino"
 cwd = os.path.dirname(os.path.abspath(__file__))
 
-BUILD_WITH_CUDA = os.environ.get("BUILD_WITH_CUDA", "1") != "0"
-print(f"BUILD_WITH_CUDA is set to: {BUILD_WITH_CUDA}")
-
 
 sha = "Unknown"
 try:
@@ -85,7 +82,7 @@ def get_extensions():
     extra_compile_args = {"cxx": []}
     define_macros = []
 
-    if BUILD_WITH_CUDA and CUDA_HOME is not None and (torch.cuda.is_available() or "TORCH_CUDA_ARCH_LIST" in os.environ):
+    if CUDA_HOME is not None and (torch.cuda.is_available() or "TORCH_CUDA_ARCH_LIST" in os.environ):
         print("Compiling with CUDA")
         extension = CUDAExtension
         sources += source_cuda
@@ -97,8 +94,10 @@ def get_extensions():
             "-D__CUDA_NO_HALF2_OPERATORS__",
         ]
     else:
-        print("Skipping custom CUDA ops (BUILD_WITH_CUDA is False or CUDA not found)")
-        return []
+        print("Compiling without CUDA")
+        define_macros += [("WITH_HIP", None)]
+        extra_compile_args["nvcc"] = []
+        return None
 
     sources = [os.path.join(extensions_dir, s) for s in sources]
     include_dirs = [extensions_dir]
