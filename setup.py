@@ -27,14 +27,14 @@ import subprocess
 import subprocess
 import sys
 
-def install_torch():
-    try:
-        import torch
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
+# def install_torch():
+#     try:
+#         import torch
+#     except ImportError:
+#         subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
 
-# Call the function to ensure torch is installed
-install_torch()
+# # Call the function to ensure torch is installed
+# install_torch()
 
 import torch
 from setuptools import find_packages, setup
@@ -44,6 +44,9 @@ from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension
 version = "0.1.0"
 package_name = "groundingdino"
 cwd = os.path.dirname(os.path.abspath(__file__))
+
+BUILD_WITH_CUDA = os.environ.get("BUILD_WITH_CUDA", "1") != "0"
+print(f"BUILD_WITH_CUDA is set to: {BUILD_WITH_CUDA}")
 
 
 sha = "Unknown"
@@ -82,7 +85,7 @@ def get_extensions():
     extra_compile_args = {"cxx": []}
     define_macros = []
 
-    if CUDA_HOME is not None and (torch.cuda.is_available() or "TORCH_CUDA_ARCH_LIST" in os.environ):
+    if BUILD_WITH_CUDA and CUDA_HOME is not None and (torch.cuda.is_available() or "TORCH_CUDA_ARCH_LIST" in os.environ):
         print("Compiling with CUDA")
         extension = CUDAExtension
         sources += source_cuda
@@ -94,10 +97,8 @@ def get_extensions():
             "-D__CUDA_NO_HALF2_OPERATORS__",
         ]
     else:
-        print("Compiling without CUDA")
-        define_macros += [("WITH_HIP", None)]
-        extra_compile_args["nvcc"] = []
-        return None
+        print("Skipping custom CUDA ops (BUILD_WITH_CUDA is False or CUDA not found)")
+        return []
 
     sources = [os.path.join(extensions_dir, s) for s in sources]
     include_dirs = [extensions_dir]
